@@ -107,7 +107,8 @@
             body { background: white; color: black; }
         }
     </style>
-</head>
+</head><script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
 <body>
 
     <header>
@@ -313,6 +314,36 @@
             );
             window.location.href = `mailto:?subject=${assunto}&body=${corpo}`;
         }
-    </script>
+    </script>// Link direto para o seu arquivo no GitHub Pages
+const arquivoUrl = "https://carlosthiago08-coder.github.io/dash-board-painel/Pasta 1.xlsx";
+
+async function lerDadosDoExcel() {
+    try {
+        // Busca o arquivo
+        const resposta = await fetch(arquivoUrl);
+        const buffer = await resposta.arrayBuffer();
+
+        // Lê o Excel
+        const workbook = XLSX.read(buffer, { type: 'array' });
+
+        // Pega a primeira aba
+        const primeiraAba = workbook.SheetNames[0];
+        const dados = XLSX.utils.sheet_to_json(workbook.Sheets[primeiraAba]);
+
+        // Mostra no console do navegador para testar
+        console.log("Dados carregados:", dados);
+
+        // AQUI você chama a função que cria seus gráficos
+        // Exemplo: criarGrafico(dados);
+
+    } catch (erro) {
+        console.error("Erro ao ler o arquivo:", erro);
+    }
+}
+
+// Executa a leitura ao abrir a página
+lerDadosDoExcel();
+
 </body>
+
 </html>
