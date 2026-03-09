@@ -3,100 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Dashboard Automático</title>
+    <title>Dashboard Automático - Excel</title>
     
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <style>
-        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; }
-    </style>
 </head>
-<body class="bg-gray-100 p-5">
+<body class="bg-slate-100 min-h-screen p-4">
 
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-blue-800">Painel de Dados Automático</h1>
-            <p class="text-gray-600">Lendo arquivo: <strong>Pasta 1.xlsx</strong></p>
+    <div class="max-w-5xl mx-auto">
+        <header class="bg-white shadow-sm rounded-lg p-6 mb-6 text-center">
+            <h1 class="text-2xl font-bold text-slate-800">📊 Meu Painel de Dados</h1>
+            <p class="text-slate-500">Sincronizado com: <span class="font-mono text-blue-600">Pasta 1.xlsx</span></p>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="card">
-                <h2 class="text-xl font-semibold mb-4 text-gray-700">Análise Visual</h2>
-                <canvas id="meuGrafico"></canvas>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Visualização Gráfica</h2>
+                <canvas id="meuGrafico" height="250"></canvas>
             </div>
 
-            <div class="card overflow-x-auto">
-                <h2 class="text-xl font-semibold mb-4 text-gray-700">Dados da Planilha</h2>
-                <div id="tabela-container">
-                    <p class="text-gray-400">Carregando dados...</p>
+            <div class="bg-white p-6 rounded-lg shadow-md overflow-hidden">
+                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Dados da Planilha</h2>
+                <div id="tabela-container" class="overflow-x-auto max-h-[400px]">
+                    <p class="text-slate-400 italic">Buscando dados no GitHub...</p>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configurações do arquivo
-        const NOME_ARQUIVO = "Pasta 1.xlsx";
-        const URL_ARQUIVO = `https://carlosthiago08-coder.github.io/dash-board-painel/${encodeURIComponent(NOME_ARQUIVO)}`;
+        // ESTA É A URL CORRETA PARA O SEU ARQUIVO
+        // O %20 substitui o espaço no nome "Pasta 1.xlsx"
+        const URL_EXCEL = "https://raw.githubusercontent.com/carlosthiago08-coder/dash-board-painel/main/Pasta%201.xlsx";
 
-        async function inicializarDashboard() {
+        async function carregarDashboard() {
             try {
-                // 1. Buscar o arquivo Excel
-                const resposta = await fetch(URL_ARQUIVO);
-                if (!resposta.ok) throw new Error("Arquivo não encontrado no GitHub.");
+                const response = await fetch(URL_EXCEL);
                 
-                const buffer = await resposta.arrayBuffer();
-                const workbook = XLSX.read(buffer, { type: 'array' });
+                if (!response.ok) {
+                    throw new Error("Não encontrei o arquivo 'Pasta 1.xlsx'. Verifique se o nome está correto no GitHub.");
+                }
 
-                // 2. Processar a primeira aba
-                const abaNome = workbook.SheetNames[0];
-                const dados = XLSX.utils.sheet_to_json(workbook.Sheets[abaNome]);
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
 
-                if (dados.length === 0) {
-                    document.getElementById('tabela-container').innerHTML = "A planilha está vazia.";
+                // Pega a primeira aba da planilha
+                const nomeAba = workbook.SheetNames[0];
+                const planilha = workbook.Sheets[nomeAba];
+                
+                // Converte para JSON
+                const json = XLSX.utils.sheet_to_json(planilha);
+
+                if (json.length === 0) {
+                    document.getElementById('tabela-container').innerHTML = "Planilha lida, mas parece estar vazia.";
                     return;
                 }
 
-                // 3. Criar a Tabela HTML automaticamente
-                gerarTabela(dados);
-
-                // 4. Criar o Gráfico (Usa a primeira e a segunda coluna como base)
-                gerarGrafico(dados);
+                construirTabela(json);
+                construirGrafico(json);
 
             } catch (erro) {
-                console.error("Erro:", erro);
-                document.getElementById('tabela-container').innerHTML = `<span class="text-red-500">Erro ao carregar: ${erro.message}</span>`;
+                console.error(erro);
+                document.getElementById('tabela-container').innerHTML = 
+                    `<div class="text-red-500 font-bold p-4 bg-red-50 rounded">
+                        Erro: ${erro.message} <br>
+                        <small class="text-slate-500 font-normal">Dica: Verifique se o arquivo foi subido com o nome exato de "Pasta 1.xlsx"</small>
+                    </div>`;
             }
         }
 
-        function gerarTabela(dados) {
-            let html = '<table class="w-full text-left border-collapse">';
+        function construirTabela(dados) {
             const colunas = Object.keys(dados[0]);
-            
-            // Cabeçalho
-            html += '<tr class="border-b bg-gray-50">';
-            colunas.forEach(col => html += `<th class="p-2 font-bold">${col}</th>`);
-            html += '</tr>';
+            let html = '<table class="min-w-full text-sm text-left">';
+            html += '<thead class="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b"><tr>';
+            colunas.forEach(col => html += `<th class="px-4 py-2">${col}</th>`);
+            html += '</tr></thead><tbody>';
 
-            // Linhas (limite de 10 para não travar)
-            dados.slice(0, 10).forEach(linha => {
-                html += '<tr class="border-b hover:bg-gray-50">';
-                colunas.forEach(col => html += `<td class="p-2">${linha[col] || ""}</td>`);
+            dados.forEach(linha => {
+                html += '<tr class="border-b hover:bg-slate-50 transition-colors">';
+                colunas.forEach(col => html += `<td class="px-4 py-2 text-slate-600">${linha[col] || '-'}</td>`);
                 html += '</tr>';
             });
-            html += '</table>';
+
+            html += '</tbody></table>';
             document.getElementById('tabela-container').innerHTML = html;
         }
 
-        function gerarGrafico(dados) {
-            const ctx = document.getElementById('meuGrafico').getContext('2d');
+        function construirGrafico(dados) {
             const colunas = Object.keys(dados[0]);
+            const ctx = document.getElementById('meuGrafico').getContext('2d');
             
-            // Pega os nomes da 1ª coluna e os valores da 2ª coluna
-            const labels = dados.map(d => d[colunas[0]]);
-            const valores = dados.map(d => d[colunas[1]]);
+            // Tenta usar a 1ª coluna para os nomes e a 2ª para os valores
+            const labels = dados.map(item => item[colunas[0]]);
+            const valores = dados.map(item => item[colunas[1]]);
 
             new Chart(ctx, {
                 type: 'bar',
@@ -105,16 +106,22 @@
                     datasets: [{
                         label: colunas[1] || 'Valores',
                         data: valores,
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 5
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgb(37, 99, 235)',
+                        borderWidth: 1,
+                        borderRadius: 4
                     }]
                 },
-                options: { responsive: true }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
             });
         }
 
-        // Iniciar
-        inicializarDashboard();
+        // Inicia o processo
+        carregarDashboard();
     </script>
 </body>
 </html>
