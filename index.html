@@ -1,122 +1,17 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Automático</title>
-    
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-900 text-white min-h-screen p-6">
-
-    <div class="max-w-5xl mx-auto">
-        <header class="mb-10 text-center">
-            <h1 class="text-3xl font-bold text-blue-400">📊 Painel de Vendas / Dados</h1>
-            <p class="text-slate-400 mt-2">Sincronizado com <span class="underline">dados.xlsx</span></p>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
-                <h2 class="text-xl font-semibold mb-4 text-blue-300">Análise Visual</h2>
-                <div class="h-[300px]">
-                    <canvas id="graficoExcel"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 overflow-hidden">
-                <h2 class="text-xl font-semibold mb-4 text-blue-300">Lista de Registros</h2>
-                <div id="tabela-status" class="overflow-auto max-h-[300px] custom-scrollbar">
-                    <p class="text-slate-500 animate-pulse">Aguardando conexão com o repositório...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Caminho relativo (funciona melhor no GitHub Pages)
-        // Adicionamos um número aleatório no final (?v=...) para o navegador não "viciar" no arquivo velho
-        const URL_ARQUIVO = "dados.xlsx?v=" + Math.random();
-
-        async function carregarDashboard() {
-            try {
-                const resposta = await fetch(URL_ARQUIVO);
-                
-                if (!resposta.ok) {
-                    throw new Error("O arquivo 'dados.xlsx' não foi encontrado. Verifique se você renomeou o arquivo corretamente no GitHub.");
-                }
-
-                const buffer = await resposta.arrayBuffer();
-                const workbook = XLSX.read(buffer, { type: 'array' });
-                const primeiraAba = workbook.SheetNames[0];
-                const dadosJson = XLSX.utils.sheet_to_json(workbook.Sheets[primeiraAba]);
-
-                if (dadosJson.length === 0) throw new Error("A planilha está vazia!");
-
-                renderizarTabela(dadosJson);
-                renderizarGrafico(dadosJson);
-
-            } catch (erro) {
-                document.getElementById('tabela-status').innerHTML = `
-                    <div class="bg-red-900/30 border border-red-500 text-red-200 p-4 rounded-lg">
-                        <strong>Erro:</strong> ${erro.message}
-                    </div>`;
-            }
-        }
-
-        function renderizarTabela(dados) {
-            const colunas = Object.keys(dados[0]);
-            let html = '<table class="w-full text-sm text-left border-collapse">';
-            html += '<thead class="text-slate-400 border-b border-slate-700"><tr>';
-            colunas.forEach(col => html += `<th class="p-3 font-bold uppercase">${col}</th>`);
-            html += '</tr></thead><tbody>';
-
-            dados.forEach(item => {
-                html += '<tr class="border-b border-slate-700/50 hover:bg-slate-700/30">';
-                colunas.forEach(col => html += `<td class="p-3 text-slate-300">${item[col] || ""}</td>`);
-                html += '</tr>';
-            });
-
-            html += '</tbody></table>';
-            document.getElementById('tabela-status').innerHTML = html;
-        }
-
-        function renderizarGrafico(dados) {
-            const ctx = document.getElementById('graficoExcel').getContext('2d');
-            const colunas = Object.keys(dados[0]);
-
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: dados.map(d => d[colunas[0]]),
-                    datasets: [{
-                        label: colunas[1],
-                        data: dados.map(d => d[colunas[1]]),
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        // Inicia a carga
-        carregarDashboard();
-    </script>
-
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+span 1; } }
     </style>
-</body>
-</html>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <h1>CUSTOMER <span>DIGITAL</span></h1>
+            <div id="syncStatus" class="status-badge">🔄 Ligando à base de dados...</div>
+        </div>
+        <button class="btn" style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--accent); color: white; cursor:pointer;" onclick="window.print()">📄 PDF</button>
+    </header>
+
+    <div class="grid">
+        <div class="card"><h3>1- Volume por Cliente</h3><div class="chart-container"><canvas id="chartCli"></canvas></div></div>
+        <div class="card"><h3>2- Volume por Planta</h3><div class="chart-container"><canvas id="chartPla"></canvas></div></div>
+        <div class="card"><h3>3- Visão por Incot
