@@ -2,126 +2,81 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Automático - Excel</title>
-    
+    <title>Dashboard Real-Time</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 min-h-screen p-4">
-
-    <div class="max-w-5xl mx-auto">
-        <header class="bg-white shadow-sm rounded-lg p-6 mb-6 text-center">
-            <h1 class="text-2xl font-bold text-slate-800">📊 Meu Painel de Dados</h1>
-            <p class="text-slate-500">Sincronizado com: <span class="font-mono text-blue-600">Pasta 1.xlsx</span></p>
-        </header>
-
+<body class="bg-gray-900 text-white p-6">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6 text-blue-400 text-center">📊 Painel de Controle Automatizado</h1>
+        
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Visualização Gráfica</h2>
-                <canvas id="meuGrafico" height="250"></canvas>
+            <div class="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700">
+                <canvas id="graficoBarras"></canvas>
             </div>
-
-            <div class="bg-white p-6 rounded-lg shadow-md overflow-hidden">
-                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Dados da Planilha</h2>
-                <div id="tabela-container" class="overflow-x-auto max-h-[400px]">
-                    <p class="text-slate-400 italic">Buscando dados no GitHub...</p>
-                </div>
+            <div id="status" class="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700 overflow-auto max-h-64 text-sm">
+                <p class="text-yellow-500 animate-pulse">Conectando ao banco de dados...</p>
             </div>
         </div>
     </div>
 
     <script>
-        // ESTA É A URL CORRETA PARA O SEU ARQUIVO
-        // O %20 substitui o espaço no nome "Pasta 1.xlsx"
-        const URL_EXCEL = "https://raw.githubusercontent.com/carlosthiago08-coder/dash-board-painel/main/Pasta%201.xlsx";
+        // Agora usamos o nome fixo e simples
+        const URL_ARQUIVO = "dados.xlsx"; 
 
-        async function carregarDashboard() {
+        async function carregar() {
             try {
-                const response = await fetch(URL_EXCEL);
+                // Adicionamos um número aleatório no final para evitar que o navegador use o arquivo antigo (Cache)
+                const response = await fetch(URL_ARQUIVO + '?v=' + Math.random());
                 
-                if (!response.ok) {
-                    throw new Error("Não encontrei o arquivo 'Pasta 1.xlsx'. Verifique se o nome está correto no GitHub.");
-                }
+                if (!response.ok) throw new Error("Arquivo 'dados.xlsx' não encontrado no repositório.");
 
                 const arrayBuffer = await response.arrayBuffer();
-                const data = new Uint8Array(arrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(arrayBuffer);
+                const dados = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-                // Pega a primeira aba da planilha
-                const nomeAba = workbook.SheetNames[0];
-                const planilha = workbook.Sheets[nomeAba];
-                
-                // Converte para JSON
-                const json = XLSX.utils.sheet_to_json(planilha);
+                if (dados.length === 0) throw new Error("A planilha está vazia!");
 
-                if (json.length === 0) {
-                    document.getElementById('tabela-container').innerHTML = "Planilha lida, mas parece estar vazia.";
-                    return;
-                }
+                exibirDados(dados);
+                criarGrafico(dados);
 
-                construirTabela(json);
-                construirGrafico(json);
-
-            } catch (erro) {
-                console.error(erro);
-                document.getElementById('tabela-container').innerHTML = 
-                    `<div class="text-red-500 font-bold p-4 bg-red-50 rounded">
-                        Erro: ${erro.message} <br>
-                        <small class="text-slate-500 font-normal">Dica: Verifique se o arquivo foi subido com o nome exato de "Pasta 1.xlsx"</small>
-                    </div>`;
+            } catch (err) {
+                document.getElementById('status').innerHTML = `<div class="text-red-500 font-bold">❌ ERRO: ${err.message}</div>`;
             }
         }
 
-        function construirTabela(dados) {
-            const colunas = Object.keys(dados[0]);
-            let html = '<table class="min-w-full text-sm text-left">';
-            html += '<thead class="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b"><tr>';
-            colunas.forEach(col => html += `<th class="px-4 py-2">${col}</th>`);
+        function exibirDados(dados) {
+            let html = '<table class="w-full text-left"><thead><tr class="text-blue-400 border-b border-gray-600">';
+            Object.keys(dados[0]).forEach(key => html += `<th class="p-2">${key}</th>`);
             html += '</tr></thead><tbody>';
-
-            dados.forEach(linha => {
-                html += '<tr class="border-b hover:bg-slate-50 transition-colors">';
-                colunas.forEach(col => html += `<td class="px-4 py-2 text-slate-600">${linha[col] || '-'}</td>`);
+            dados.forEach(item => {
+                html += '<tr class="border-b border-gray-700 hover:bg-gray-750 transition">';
+                Object.values(item).forEach(val => html += `<td class="p-2 text-gray-300">${val}</td>`);
                 html += '</tr>';
             });
-
             html += '</tbody></table>';
-            document.getElementById('tabela-container').innerHTML = html;
+            document.getElementById('status').innerHTML = html;
         }
 
-        function construirGrafico(dados) {
+        function criarGrafico(dados) {
+            const ctx = document.getElementById('graficoBarras').getContext('2d');
             const colunas = Object.keys(dados[0]);
-            const ctx = document.getElementById('meuGrafico').getContext('2d');
-            
-            // Tenta usar a 1ª coluna para os nomes e a 2ª para os valores
-            const labels = dados.map(item => item[colunas[0]]);
-            const valores = dados.map(item => item[colunas[1]]);
-
             new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: labels,
+                    labels: dados.map(d => d[colunas[0]]),
                     datasets: [{
-                        label: colunas[1] || 'Valores',
-                        data: valores,
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                        borderColor: 'rgb(37, 99, 235)',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        label: colunas[1],
+                        data: dados.map(d => d[colunas[1]]),
+                        backgroundColor: '#60a5fa'
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
+                options: { plugins: { legend: { labels: { color: 'white' } } } }
             });
         }
 
-        // Inicia o processo
-        carregarDashboard();
+        carregar();
     </script>
 </body>
 </html>
